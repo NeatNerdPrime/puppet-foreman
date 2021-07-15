@@ -82,14 +82,16 @@ class foreman::config {
 
     group { $foreman::group:
       ensure => 'present',
+      system => true,
     }
     user { $foreman::user:
       ensure  => 'present',
-      shell   => '/bin/false',
+      shell   => $foreman::user_shell,
       comment => 'Foreman',
       home    => $foreman::app_root,
       gid     => $foreman::group,
       groups  => unique($_user_groups),
+      system  => true,
     }
   }
 
@@ -126,10 +128,6 @@ class foreman::config {
     $foreman_socket_override = template('foreman/foreman.socket-overrides.erb')
 
     if $foreman::ipa_authentication {
-      unless fact('foreman_ipa.default_server') {
-        fail("${facts['networking']['hostname']}: The system does not seem to be IPA-enrolled")
-      }
-
       if $facts['os']['selinux']['enabled'] {
         selboolean { ['allow_httpd_mod_auth_pam', 'httpd_dbus_sssd']:
           persistent => true,
@@ -153,14 +151,16 @@ class foreman::config {
         content => template('foreman/pam_service.erb'),
       }
 
+      $http_keytab = pick($foreman::http_keytab, "${apache::conf_dir}/http.keytab")
+
       exec { 'ipa-getkeytab':
         command => "/bin/echo Get keytab \
           && KRB5CCNAME=KEYRING:session:get-http-service-keytab kinit -k \
-          && KRB5CCNAME=KEYRING:session:get-http-service-keytab /usr/sbin/ipa-getkeytab -s ${facts['foreman_ipa']['default_server']} -k ${foreman::http_keytab} -p HTTP/${facts['networking']['fqdn']} \
+          && KRB5CCNAME=KEYRING:session:get-http-service-keytab /usr/sbin/ipa-getkeytab -k ${http_keytab} -p HTTP/${facts['networking']['fqdn']} \
           && kdestroy -c KEYRING:session:get-http-service-keytab",
-        creates => $foreman::http_keytab,
+        creates => $http_keytab,
       }
-      -> file { $foreman::http_keytab:
+      -> file { $http_keytab:
         ensure => file,
         owner  => $apache::user,
         mode   => '0600',
@@ -180,10 +180,10 @@ class foreman::config {
 
 
       if $foreman::ipa_manage_sssd {
-        $sssd = $facts['foreman_sssd']
+        $sssd = pick(fact('foreman_sssd'), {})
         $sssd_services = join(unique(pick($sssd['services'], []) + ['ifp']), ', ')
         $sssd_ldap_user_extra_attrs = join(unique(pick($sssd['ldap_user_extra_attrs'], []) + ['email:mail', 'lastname:sn', 'firstname:givenname']), ', ')
-        $sssd_allowed_uids = join(unique(pick($sssd['allowed_uids'], []) + ['apache', 'root']), ', ')
+        $sssd_allowed_uids = join(unique(pick($sssd['allowed_uids'], []) + [$apache::user, 'root']), ', ')
         $sssd_user_attributes = join(unique(pick($sssd['user_attributes'], []) + ['+email', '+firstname', '+lastname']), ', ')
 
         augeas { 'sssd-ifp-extra-attributes':

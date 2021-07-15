@@ -2,9 +2,11 @@ require 'spec_helper'
 
 describe 'foreman' do
   on_supported_os.each do |os, facts|
-    context "on #{os}", if: facts[:osfamily] == 'RedHat' do
+    context "on #{os}" do
       let(:facts) { facts.merge(interfaces: '') }
       let(:params) { { ipa_authentication: true } }
+
+      keytab_path = facts[:osfamily] == 'RedHat' ? '/etc/httpd/conf/http.keytab' : '/etc/apache2/http.keytab'
 
       describe 'without apache' do
         let(:params) { super().merge(apache: false) }
@@ -14,23 +16,9 @@ describe 'foreman' do
       context 'with apache' do
         let(:params) { super().merge(apache: true) }
 
-        describe 'not IPA-enrolled system' do
-          describe 'ipa_server fact missing' do
-            it { should raise_error(Puppet::Error, /The system does not seem to be IPA-enrolled/) }
-          end
-
-          describe 'default_ipa_realm fact missing' do
-            it { should raise_error(Puppet::Error, /The system does not seem to be IPA-enrolled/) }
-          end
-        end
-
         describe 'enrolled system' do
           let(:facts) do
             super().merge(
-              foreman_ipa: {
-                default_server: 'ipa.example.com',
-                default_realm: 'REALM'
-              },
               foreman_sssd: {
                 services: ['ifp']
               }
@@ -50,7 +38,7 @@ describe 'foreman' do
             should contain_foreman__config__apache__fragment('lookup_identity')
 
             should contain_foreman__config__apache__fragment('auth_gssapi')
-              .with_ssl_content(%r{^\s*GssapiCredStore keytab:/etc/httpd/conf/http.keytab$})
+              .with_ssl_content(%r{^\s*GssapiCredStore keytab:#{keytab_path}$})
               .with_ssl_content(/^\s*require pam-account foreman$/)
           end
 

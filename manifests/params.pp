@@ -53,6 +53,8 @@ class foreman::params {
   $email_smtp_authentication = 'none'
   $email_smtp_user_name      = undef
   $email_smtp_password       = undef
+  $email_reply_address       = undef
+  $email_subject_prefix      = undef
 
   # Telemetry
   $telemetry_prefix             = 'fm_rails'
@@ -98,11 +100,14 @@ class foreman::params {
         $plugin_prefix = 'tfm-rubygem-foreman_'
         $configure_scl_repo = true
       }
+
+      $user_shell = '/sbin/nologin'
     }
     'Debian': {
       $passenger_ruby_package = undef
       $plugin_prefix = 'ruby-foreman-'
       $configure_scl_repo = false
+      $user_shell = '/usr/sbin/nologin'
     }
     'Linux': {
       case $facts['os']['name'] {
@@ -110,6 +115,7 @@ class foreman::params {
           $passenger_ruby_package = 'tfm-rubygem-passenger-native'
           $plugin_prefix = 'tfm-rubygem-foreman_'
           $configure_scl_repo = true
+          $user_shell = '/sbin/nologin'
         }
         default: {
           fail("${facts['networking']['hostname']}: This module does not support operatingsystem ${facts['os']['name']}")
@@ -165,7 +171,7 @@ class foreman::params {
   $initial_location = undef
 
   $ipa_authentication = false
-  $http_keytab = '/etc/httpd/conf/http.keytab'
+  $http_keytab = undef
   $pam_service = 'foreman'
   $ipa_manage_sssd = true
 

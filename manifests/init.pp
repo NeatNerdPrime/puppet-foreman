@@ -36,6 +36,10 @@
 #
 # $email_smtp_password::          Password for SMTP server auth, if authentication is enabled
 #
+# $email_reply_address::          Email reply address for emails that Foreman is sending
+#
+# $email_subject_prefix::         Prefix to add to all outgoing email
+#
 # $initial_organization::         Name of an initial organization
 #
 # $initial_location::             Name of an initial location
@@ -133,7 +137,7 @@
 #
 # $oauth_consumer_secret::        OAuth consumer secret
 #
-# $http_keytab::                  Path to keytab to be used for Kerberos authentication on the WebUI
+# $http_keytab::                  Path to keytab to be used for Kerberos authentication on the WebUI. If left empty, it will be automatically determined.
 #
 # $pam_service::                  PAM service used for host-based access control in IPA
 #
@@ -257,7 +261,7 @@ class foreman (
   Optional[String] $initial_organization = $foreman::params::initial_organization,
   Optional[String] $initial_location = $foreman::params::initial_location,
   Boolean $ipa_authentication = $foreman::params::ipa_authentication,
-  Stdlib::Absolutepath $http_keytab = $foreman::params::http_keytab,
+  Optional[Stdlib::Absolutepath] $http_keytab = $foreman::params::http_keytab,
   String $pam_service = $foreman::params::pam_service,
   Boolean $ipa_manage_sssd = $foreman::params::ipa_manage_sssd,
   Boolean $websockets_encrypt = $foreman::params::websockets_encrypt,
@@ -276,6 +280,8 @@ class foreman (
   Enum['none', 'plain', 'login', 'cram-md5'] $email_smtp_authentication = $foreman::params::email_smtp_authentication,
   Optional[String] $email_smtp_user_name = $foreman::params::email_smtp_user_name,
   Optional[String] $email_smtp_password = $foreman::params::email_smtp_password,
+  Optional[String] $email_reply_address = $foreman::params::email_reply_address,
+  Optional[String] $email_subject_prefix = $foreman::params::email_subject_prefix,
   String $telemetry_prefix = $foreman::params::telemetry_prefix,
   Boolean $telemetry_prometheus_enabled = $foreman::params::telemetry_prometheus_enabled,
   Boolean $telemetry_statsd_enabled = $foreman::params::telemetry_statsd_enabled,
